@@ -30,8 +30,8 @@ module "task_management" {
   ]
 
   # SES - Update these with your verified emails
-  ses_from_email = "noreply@amalitech.com"
-  admin_email    = ""  # Add your admin email
+  ses_from_email = "yram.tetteh-abotsi@amalitech.com"
+  admin_email    = "yram.tetteh-abotsi@amalitech.com"  # Add your admin email
 
   # CORS
   cors_allowed_origins = [

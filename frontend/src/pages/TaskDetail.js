@@ -134,16 +134,19 @@ function TaskDetail() {
 
   const getStatusBadgeClass = (status) => {
     const statusClasses = {
-      'open': 'badge-open',
-      'in-progress': 'badge-in-progress',
-      'completed': 'badge-completed',
-      'closed': 'badge-closed'
+      'OPEN': 'badge-open',
+      'IN_PROGRESS': 'badge-in-progress',
+      'COMPLETED': 'badge-completed',
+      'CLOSED': 'badge-closed'
     };
     return `status-badge ${statusClasses[status] || 'badge-open'}`;
   };
 
   const getPriorityBadgeClass = (priority) => {
     const priorityClasses = {
+      'LOW': 'priority-low',
+      'MEDIUM': 'priority-medium',
+      'HIGH': 'priority-high',
       'low': 'priority-low',
       'medium': 'priority-medium',
       'high': 'priority-high'
@@ -280,12 +283,21 @@ function TaskDetail() {
               value={task.status}
               onChange={(e) => handleStatusChange(e.target.value)}
               className={`status-select-full ${getStatusBadgeClass(task.status)}`}
+              disabled={task.status === 'CLOSED' && !isAdmin}
             >
-              <option value="open">Open</option>
-              <option value="in-progress">In Progress</option>
-              <option value="completed">Completed</option>
-              <option value="closed">Closed</option>
+              <option value="OPEN">Open</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="COMPLETED">Completed</option>
+              {isAdmin && <option value="CLOSED">Closed</option>}
             </select>
+            {isAdmin && task.status !== 'CLOSED' && (
+              <button 
+                className="btn btn-warning close-task-btn"
+                onClick={() => handleStatusChange('CLOSED')}
+              >
+                Close Task
+              </button>
+            )}
           </div>
 
           <div className="sidebar-section">

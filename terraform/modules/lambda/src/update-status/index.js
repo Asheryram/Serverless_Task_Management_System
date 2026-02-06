@@ -6,7 +6,7 @@
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, GetCommand, UpdateCommand } = require('@aws-sdk/lib-dynamodb');
 const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
-const { CognitoIdentityProviderClient, AdminGetUserCommand } = require('@aws-sdk/client-cognito-identity-provider');
+const { CognitoIdentityProviderClient, AdminGetUserCommand, ListUsersInGroupCommand } = require('@aws-sdk/client-cognito-identity-provider');
 
 const dynamoClient = new DynamoDBClient({});
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
@@ -63,6 +63,24 @@ const getUserEmail = async (userId) => {
   } catch (error) {
     console.error('Error getting user email:', error);
     return null;
+  }
+};
+
+// Get all admin user IDs
+const getAdminUserIds = async () => {
+  try {
+    const result = await cognitoClient.send(new ListUsersInGroupCommand({
+      UserPoolId: COGNITO_USER_POOL_ID,
+      GroupName: 'Admins'
+    }));
+    
+    return result.Users?.map(u => {
+      const subAttr = u.Attributes?.find(attr => attr.Name === 'sub');
+      return subAttr?.Value;
+    }).filter(Boolean) || [];
+  } catch (error) {
+    console.error('Error getting admin users:', error);
+    return [];
   }
 };
 
@@ -150,6 +168,11 @@ exports.handler = async (event) => {
     
     // Check authorization
     if (!isAdmin(user)) {
+      // Members cannot modify closed tasks
+      if (oldStatus === 'CLOSED') {
+        return response(403, { message: 'This task is closed and cannot be modified' });
+      }
+      
       // Members can only update tasks assigned to them
       if (!task.assignedMembers?.includes(user.userId)) {
         return response(403, { message: 'You are not assigned to this task' });
@@ -188,13 +211,17 @@ exports.handler = async (event) => {
       ReturnValues: 'ALL_NEW'
     }));
     
-    // Collect all email recipients (assigned members + task creator)
+    // Get all admin user IDs
+    const adminIds = await getAdminUserIds();
+    
+    // Collect all email recipients (admins + assigned members + task creator)
     const recipientIds = new Set([
+      ...adminIds,
       ...task.assignedMembers || [],
       task.createdBy
     ]);
     
-    // Remove the user who made the update
+    // Remove the user who made the update (they don't need notification)
     recipientIds.delete(user.userId);
     
     // Send email notifications
@@ -207,7 +234,7 @@ exports.handler = async (event) => {
     
     await Promise.all(emailPromises);
     
-    console.log('Task status updated:', taskId, 'from', oldStatus, 'to', status);
+    console.log('Task status updated:', taskId, 'from', oldStatus, 'to', status, 'Notified:', recipientIds.size, 'users');
     
     return response(200, {
       message: 'Task status updated successfully',

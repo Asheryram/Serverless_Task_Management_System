@@ -298,6 +298,33 @@
   padding: 20px;
 }
 
+/* Close Task Button */
+.close-task-btn {
+  margin-top: 12px;
+  width: 100%;
+  background: var(--warning, #f59e0b);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.close-task-btn:hover {
+  background: #d97706;
+}
+
+.btn-warning {
+  background: var(--warning, #f59e0b);
+  color: white;
+}
+
+.btn-warning:hover {
+  background: #d97706;
+}
+
 @media (max-width: 900px) {
   .task-content {
     grid-template-columns: 1fr;
