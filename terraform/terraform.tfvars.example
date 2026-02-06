@@ -1,0 +1,40 @@
+# ===========================================
+# Serverless Task Management System
+# Terraform Variables Example
+# ===========================================
+# Copy this file to terraform.tfvars and update the values
+
+# AWS Configuration
+aws_region = "us-east-1"
+
+# Project Configuration
+project_name = "task-management"
+environment  = "dev"
+
+# Allowed Email Domains for User Registration
+# Only users with these email domains can register
+allowed_email_domains = [
+  "amalitech.com",
+  "amalitechtraining.org"
+]
+
+# Cognito Configuration
+cognito_callback_urls = [
+  "http://localhost:3000",
+  "http://localhost:3000/callback"
+]
+
+cognito_logout_urls = [
+  "http://localhost:3000",
+  "http://localhost:3000/login"
+]
+
+# SES Configuration
+ses_sender_email = "noreply@yourdomain.com"
+
+# Tags
+tags = {
+  Project     = "TaskManagement"
+  Environment = "dev"
+  ManagedBy   = "Terraform"
+}
