@@ -35,9 +35,9 @@ function TaskDetail() {
   const fetchTask = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await taskApi.getTask(taskId);
-      setTask(response.data.task);
-      setEditForm(response.data.task);
+      const response = await taskApi.getById(taskId);
+      setTask(response.task);
+      setEditForm(response.task);
     } catch (error) {
       toast.error('Failed to load task');
       navigate('/tasks');
@@ -49,8 +49,8 @@ function TaskDetail() {
   const fetchMembers = useCallback(async () => {
     if (isAdmin) {
       try {
-        const response = await userApi.getUsers();
-        const membersList = response.data.users.filter(u => u.role === 'member');
+        const response = await userApi.getAll();
+        const membersList = response.users.filter(u => u.role === 'member');
         setMembers(membersList);
       } catch (error) {
         console.error('Error fetching members:', error);
@@ -70,7 +70,7 @@ function TaskDetail() {
 
   const handleSave = async () => {
     try {
-      await taskApi.updateTask(taskId, {
+      await taskApi.update(taskId, {
         title: editForm.title,
         description: editForm.description,
         priority: editForm.priority,
