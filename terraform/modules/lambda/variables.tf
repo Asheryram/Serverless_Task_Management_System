@@ -47,3 +47,14 @@ variable "cognito_user_pool_id" {
   description = "Cognito User Pool ID"
   type        = string
 }
+
+variable "task_assignments_table_arn" {
+  description = "DynamoDB task assignments table ARN"
+  type        = string
+}
+
+variable "cors_allowed_origin" {
+  description = "Allowed CORS origin for Lambda responses"
+  type        = string
+  default     = "*"
+}

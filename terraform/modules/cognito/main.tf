@@ -93,9 +93,10 @@ resource "aws_cognito_user_pool" "main" {
     advanced_security_mode = "AUDIT"
   }
 
-  # Lambda triggers for email domain validation
+  # Lambda triggers
   lambda_config {
-    pre_sign_up = aws_lambda_function.pre_signup_validation.arn
+    pre_sign_up       = aws_lambda_function.pre_signup_validation.arn
+    post_confirmation = var.post_confirmation_lambda_arn
   }
 
   tags = {
@@ -181,6 +182,15 @@ resource "aws_lambda_permission" "cognito_pre_signup" {
   statement_id  = "AllowCognitoInvoke"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.pre_signup_validation.function_name
+  principal     = "cognito-idp.amazonaws.com"
+  source_arn    = aws_cognito_user_pool.main.arn
+}
+
+# Permission for Cognito to invoke post-confirmation Lambda
+resource "aws_lambda_permission" "cognito_post_confirmation" {
+  statement_id  = "AllowCognitoPostConfirmation"
+  action        = "lambda:InvokeFunction"
+  function_name = var.post_confirmation_lambda_name
   principal     = "cognito-idp.amazonaws.com"
   source_arn    = aws_cognito_user_pool.main.arn
 }

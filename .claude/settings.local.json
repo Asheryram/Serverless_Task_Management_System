@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(if not exist \"c:\\\\Users\\\\HP\\\\Documents\\\\GitHub\\\\Serverless_Task_Management_System\\\\scripts\" mkdir \"c:\\\\Users\\\\HP\\\\Documents\\\\GitHub\\\\Serverless_Task_Management_System\\\\scripts\")"
+    ]
+  }
+}

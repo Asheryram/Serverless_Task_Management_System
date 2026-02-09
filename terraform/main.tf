@@ -54,6 +54,9 @@ module "cognito" {
   ses_from_email      = var.ses_from_email
   callback_urls       = var.cognito_callback_urls
   logout_urls         = var.cognito_logout_urls
+
+  post_confirmation_lambda_arn  = module.lambda.post_confirmation_function_arn
+  post_confirmation_lambda_name = module.lambda.post_confirmation_function_name
 }
 
 # ============================================================================
@@ -93,8 +96,10 @@ module "lambda" {
   tasks_table_arn      = module.dynamodb.tasks_table_arn
   users_table_name     = module.dynamodb.users_table_name
   users_table_arn      = module.dynamodb.users_table_arn
-  ses_from_email       = var.ses_from_email
-  cognito_user_pool_id = module.cognito.user_pool_id
+  ses_from_email            = var.ses_from_email
+  cognito_user_pool_id      = module.cognito.user_pool_id
+  task_assignments_table_arn = module.dynamodb.task_assignments_table_arn
+  cors_allowed_origin       = try(var.cors_allowed_origins[0], "*")
 }
 
 # ============================================================================

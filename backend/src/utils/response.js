@@ -1,5 +1,7 @@
 // Common utilities for Lambda functions
 
+const CORS_ORIGIN = process.env.CORS_ALLOWED_ORIGIN || '*';
+
 /**
  * Standard API response helper
  */
@@ -7,7 +9,7 @@ const response = (statusCode, body, headers = {}) => ({
   statusCode,
   headers: {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Origin': CORS_ORIGIN,
     'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE,PATCH',
     ...headers
@@ -35,11 +37,13 @@ const error = (message, statusCode = 500, details = null) => {
 const getUserFromEvent = (event) => {
   const claims = event.requestContext?.authorizer?.claims;
   if (!claims) return null;
-  
+
+  const groupsClaim = claims['cognito:groups'];
+
   return {
     userId: claims.sub,
     email: claims.email,
-    groups: claims['cognito:groups'] ? claims['cognito:groups'].split(',') : [],
+    groups: Array.isArray(groupsClaim) ? groupsClaim : groupsClaim ? groupsClaim.split(',') : [],
     name: claims.name || claims.email,
     username: claims['cognito:username']
   };

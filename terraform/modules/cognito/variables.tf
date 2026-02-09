@@ -31,3 +31,13 @@ variable "logout_urls" {
   type        = list(string)
   default     = ["http://localhost:3000/logout"]
 }
+
+variable "post_confirmation_lambda_arn" {
+  description = "ARN of the post-confirmation Lambda function"
+  type        = string
+}
+
+variable "post_confirmation_lambda_name" {
+  description = "Name of the post-confirmation Lambda function"
+  type        = string
+}

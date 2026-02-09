@@ -5,7 +5,7 @@ locals {
   lambda_runtime = "nodejs18.x"
   lambda_timeout = 30
   lambda_memory  = 256
-  
+
   common_env_vars = {
     NODE_ENV             = var.environment
     AWS_NODEJS_CONNECTION_REUSE_ENABLED = "1"
@@ -14,6 +14,7 @@ locals {
     SES_FROM_EMAIL       = var.ses_from_email
     COGNITO_USER_POOL_ID = var.cognito_user_pool_id
     AWS_REGION_NAME      = var.aws_region
+    CORS_ALLOWED_ORIGIN  = var.cors_allowed_origin
   }
 }
 
@@ -62,7 +63,7 @@ resource "aws_iam_role_policy" "lambda_logs" {
   })
 }
 
-# DynamoDB policy
+# DynamoDB policy - includes tasks, users, and assignments tables
 resource "aws_iam_role_policy" "lambda_dynamodb" {
   name = "${var.name_prefix}-lambda-dynamodb-${var.name_suffix}"
   role = aws_iam_role.lambda_execution_role.id
@@ -86,7 +87,9 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
           var.tasks_table_arn,
           "${var.tasks_table_arn}/index/*",
           var.users_table_arn,
-          "${var.users_table_arn}/index/*"
+          "${var.users_table_arn}/index/*",
+          var.task_assignments_table_arn,
+          "${var.task_assignments_table_arn}/index/*"
         ]
       }
     ]
@@ -127,7 +130,9 @@ resource "aws_iam_role_policy" "lambda_cognito" {
           "cognito-idp:AdminGetUser",
           "cognito-idp:ListUsers",
           "cognito-idp:ListUsersInGroup",
-          "cognito-idp:AdminListGroupsForUser"
+          "cognito-idp:AdminListGroupsForUser",
+          "cognito-idp:AdminAddUserToGroup",
+          "cognito-idp:AdminRemoveUserFromGroup"
         ]
         Resource = "*"
       }
@@ -136,35 +141,54 @@ resource "aws_iam_role_policy" "lambda_cognito" {
 }
 
 # ============================================================================
-# LAMBDA LAYER FOR SHARED DEPENDENCIES
+# LAMBDA LAYER FOR SHARED DEPENDENCIES + BACKEND CODE
 # ============================================================================
-resource "aws_lambda_layer_version" "dependencies" {
-  layer_name          = "${var.name_prefix}-dependencies-${var.name_suffix}"
-  description         = "Shared dependencies for Lambda functions"
-  compatible_runtimes = [local.lambda_runtime]
+#
+# The layer is built by running: node scripts/build.js
+# This installs node_modules and copies shared backend code into build/layer/
+#
+# Layer structure at runtime (/opt/):
+#   nodejs/
+#     node_modules/    (npm production dependencies)
+#     shared/
+#       services/
+#         cognito.js
+#         dynamodb.js
+#         email.js
+#       utils/
+#         response.js
+#
 
-  filename         = data.archive_file.lambda_layer.output_path
-  source_code_hash = data.archive_file.lambda_layer.output_base64sha256
+resource "null_resource" "build_layer" {
+  triggers = {
+    package_json = filemd5("${path.module}/../../../backend/package.json")
+    cognito_js   = filemd5("${path.module}/../../../backend/src/services/cognito.js")
+    dynamodb_js  = filemd5("${path.module}/../../../backend/src/services/dynamodb.js")
+    email_js     = filemd5("${path.module}/../../../backend/src/services/email.js")
+    response_js  = filemd5("${path.module}/../../../backend/src/utils/response.js")
+  }
+
+  provisioner "local-exec" {
+    command     = "node scripts/build.js"
+    working_dir = "${abspath("${path.module}/../../..")}"
+  }
 }
 
 data "archive_file" "lambda_layer" {
   type        = "zip"
+  source_dir  = "${path.module}/../../../build/layer"
   output_path = "${path.module}/lambda_layer.zip"
 
-  source {
-    content = jsonencode({
-      name = "lambda-layer",
-      version = "1.0.0",
-      dependencies = {
-        "uuid" = "^9.0.0",
-        "@aws-sdk/client-dynamodb" = "^3.400.0",
-        "@aws-sdk/lib-dynamodb" = "^3.400.0",
-        "@aws-sdk/client-ses" = "^3.400.0",
-        "@aws-sdk/client-cognito-identity-provider" = "^3.400.0"
-      }
-    })
-    filename = "nodejs/package.json"
-  }
+  depends_on = [null_resource.build_layer]
+}
+
+resource "aws_lambda_layer_version" "dependencies" {
+  layer_name          = "${var.name_prefix}-dependencies-${var.name_suffix}"
+  description         = "Shared dependencies and backend services for Lambda functions"
+  compatible_runtimes = [local.lambda_runtime]
+
+  filename         = data.archive_file.lambda_layer.output_path
+  source_code_hash = data.archive_file.lambda_layer.output_base64sha256
 }
 
 # ============================================================================
@@ -177,6 +201,7 @@ resource "aws_lambda_function" "create_task" {
   runtime       = local.lambda_runtime
   timeout       = local.lambda_timeout
   memory_size   = local.lambda_memory
+  layers        = [aws_lambda_layer_version.dependencies.arn]
 
   filename         = data.archive_file.create_task.output_path
   source_code_hash = data.archive_file.create_task.output_base64sha256
@@ -207,6 +232,7 @@ resource "aws_lambda_function" "get_tasks" {
   runtime       = local.lambda_runtime
   timeout       = local.lambda_timeout
   memory_size   = local.lambda_memory
+  layers        = [aws_lambda_layer_version.dependencies.arn]
 
   filename         = data.archive_file.get_tasks.output_path
   source_code_hash = data.archive_file.get_tasks.output_base64sha256
@@ -237,6 +263,7 @@ resource "aws_lambda_function" "get_task" {
   runtime       = local.lambda_runtime
   timeout       = local.lambda_timeout
   memory_size   = local.lambda_memory
+  layers        = [aws_lambda_layer_version.dependencies.arn]
 
   filename         = data.archive_file.get_task.output_path
   source_code_hash = data.archive_file.get_task.output_base64sha256
@@ -267,6 +294,7 @@ resource "aws_lambda_function" "update_task" {
   runtime       = local.lambda_runtime
   timeout       = local.lambda_timeout
   memory_size   = local.lambda_memory
+  layers        = [aws_lambda_layer_version.dependencies.arn]
 
   filename         = data.archive_file.update_task.output_path
   source_code_hash = data.archive_file.update_task.output_base64sha256
@@ -297,6 +325,7 @@ resource "aws_lambda_function" "delete_task" {
   runtime       = local.lambda_runtime
   timeout       = local.lambda_timeout
   memory_size   = local.lambda_memory
+  layers        = [aws_lambda_layer_version.dependencies.arn]
 
   filename         = data.archive_file.delete_task.output_path
   source_code_hash = data.archive_file.delete_task.output_base64sha256
@@ -327,6 +356,7 @@ resource "aws_lambda_function" "assign_task" {
   runtime       = local.lambda_runtime
   timeout       = local.lambda_timeout
   memory_size   = local.lambda_memory
+  layers        = [aws_lambda_layer_version.dependencies.arn]
 
   filename         = data.archive_file.assign_task.output_path
   source_code_hash = data.archive_file.assign_task.output_base64sha256
@@ -357,6 +387,7 @@ resource "aws_lambda_function" "update_status" {
   runtime       = local.lambda_runtime
   timeout       = local.lambda_timeout
   memory_size   = local.lambda_memory
+  layers        = [aws_lambda_layer_version.dependencies.arn]
 
   filename         = data.archive_file.update_status.output_path
   source_code_hash = data.archive_file.update_status.output_base64sha256
@@ -387,6 +418,7 @@ resource "aws_lambda_function" "get_users" {
   runtime       = local.lambda_runtime
   timeout       = local.lambda_timeout
   memory_size   = local.lambda_memory
+  layers        = [aws_lambda_layer_version.dependencies.arn]
 
   filename         = data.archive_file.get_users.output_path
   source_code_hash = data.archive_file.get_users.output_base64sha256
@@ -417,12 +449,23 @@ resource "aws_lambda_function" "post_confirmation" {
   runtime       = local.lambda_runtime
   timeout       = local.lambda_timeout
   memory_size   = local.lambda_memory
+  layers        = [aws_lambda_layer_version.dependencies.arn]
 
   filename         = data.archive_file.post_confirmation.output_path
   source_code_hash = data.archive_file.post_confirmation.output_base64sha256
 
+  # Uses its own env vars WITHOUT cognito_user_pool_id to avoid circular dependency.
+  # The handler reads userPoolId from the Cognito trigger event instead.
   environment {
-    variables = local.common_env_vars
+    variables = {
+      NODE_ENV             = var.environment
+      AWS_NODEJS_CONNECTION_REUSE_ENABLED = "1"
+      TASKS_TABLE_NAME     = var.tasks_table_name
+      USERS_TABLE_NAME     = var.users_table_name
+      SES_FROM_EMAIL       = var.ses_from_email
+      AWS_REGION_NAME      = var.aws_region
+      CORS_ALLOWED_ORIGIN  = var.cors_allowed_origin
+    }
   }
 
   tags = {

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { fetchAuthSession } from 'aws-amplify/auth';
 
-const API_URL = 'https://q60vvgkbq2.execute-api.eu-central-1.amazonaws.com/dev';
+const API_URL = process.env.REACT_APP_API_URL || 'https://q60vvgkbq2.execute-api.eu-central-1.amazonaws.com/dev';
 
 // Create axios instance
 const api = axios.create({
