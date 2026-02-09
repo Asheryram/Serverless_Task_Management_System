@@ -6,7 +6,7 @@
 const { success, error, getUserFromEvent, isAdmin, parseBody, getPathParam, isValidStatus, TASK_STATUSES } = require('/opt/nodejs/shared/utils/response');
 const { getTaskById, updateTask } = require('/opt/nodejs/shared/services/dynamodb');
 const { getUserEmail, listUsersInGroup } = require('/opt/nodejs/shared/services/cognito');
-const { sendStatusUpdateEmail } = require('/opt/nodejs/shared/services/email');
+const { sendStatusUpdateEmail } = require('/opt/nodejs/shared/services/sns');
 
 exports.handler = async (event) => {
   console.log('Event:', JSON.stringify(event, null, 2));

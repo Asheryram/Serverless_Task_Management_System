@@ -6,9 +6,12 @@
 // dependency). Instead it reads userPoolId directly from the trigger event.
 
 const { CognitoIdentityProviderClient, AdminAddUserToGroupCommand } = require('@aws-sdk/client-cognito-identity-provider');
+const { SNSClient, SubscribeCommand } = require('@aws-sdk/client-sns');
 const { createUser, getUserById } = require('/opt/nodejs/shared/services/dynamodb');
 
 const cognitoClient = new CognitoIdentityProviderClient({});
+const snsClient = new SNSClient({});
+const SNS_TOPIC_ARN = process.env.SNS_TOPIC_ARN;
 
 exports.handler = async (event) => {
   console.log('Event:', JSON.stringify(event, null, 2));
@@ -58,6 +61,24 @@ exports.handler = async (event) => {
       console.log('User added to Members group');
     } catch (groupError) {
       console.error('Error adding user to group:', groupError);
+    }
+
+    // Subscribe user to SNS topic with filter policy (only receives their own notifications)
+    if (SNS_TOPIC_ARN) {
+      try {
+        await snsClient.send(new SubscribeCommand({
+          TopicArn: SNS_TOPIC_ARN,
+          Protocol: 'email',
+          Endpoint: email,
+          Attributes: {
+            FilterPolicy: JSON.stringify({ email: [email] }),
+            FilterPolicyScope: 'MessageAttributes'
+          }
+        }));
+        console.log('User subscribed to SNS topic:', email);
+      } catch (snsError) {
+        console.error('Error subscribing user to SNS:', snsError);
+      }
     }
 
     return event;

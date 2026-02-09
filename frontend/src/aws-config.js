@@ -22,6 +22,12 @@ const awsConfig = {
         region: process.env.REACT_APP_AWS_REGION 
       }
     }
+  },
+  Notifications: {
+    SNS: {
+      region: process.env.REACT_APP_AWS_REGION,
+      topicArn: process.env.REACT_APP_SNS_TOPIC_ARN
+    }
   }
 };
 

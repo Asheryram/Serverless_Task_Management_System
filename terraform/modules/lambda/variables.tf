@@ -38,8 +38,8 @@ variable "users_table_arn" {
   type        = string
 }
 
-variable "ses_from_email" {
-  description = "From email for SES notifications"
+variable "sns_topic_arn" {
+  description = "SNS topic ARN for notifications"
   type        = string
 }
 

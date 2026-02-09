@@ -11,7 +11,7 @@ locals {
     AWS_NODEJS_CONNECTION_REUSE_ENABLED = "1"
     TASKS_TABLE_NAME     = var.tasks_table_name
     USERS_TABLE_NAME     = var.users_table_name
-    SES_FROM_EMAIL       = var.ses_from_email
+    SNS_TOPIC_ARN        = var.sns_topic_arn
     COGNITO_USER_POOL_ID = var.cognito_user_pool_id
     AWS_REGION_NAME      = var.aws_region
     CORS_ALLOWED_ORIGIN  = var.cors_allowed_origin
@@ -96,21 +96,22 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
   })
 }
 
-# SES policy for sending emails
-resource "aws_iam_role_policy" "lambda_ses" {
-  name = "${var.name_prefix}-lambda-ses-${var.name_suffix}"
+# SNS policy for publishing notifications
+resource "aws_iam_role_policy" "lambda_sns" {
+  name = "${var.name_prefix}-lambda-sns-${var.name_suffix}"
   role = aws_iam_role.lambda_execution_role.id
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = [
-          "ses:SendEmail",
-          "ses:SendRawEmail"
+        Effect   = "Allow"
+        Action   = [
+          "sns:Publish",
+          "sns:Subscribe",
+          "sns:SetSubscriptionAttributes"
         ]
-        Resource = "*"
+        Resource = var.sns_topic_arn
       }
     ]
   })
@@ -164,7 +165,7 @@ resource "null_resource" "build_layer" {
     package_json = filemd5("${path.module}/../../../backend/package.json")
     cognito_js   = filemd5("${path.module}/../../../backend/src/services/cognito.js")
     dynamodb_js  = filemd5("${path.module}/../../../backend/src/services/dynamodb.js")
-    email_js     = filemd5("${path.module}/../../../backend/src/services/email.js")
+    sns_js       = filemd5("${path.module}/../../../backend/src/services/sns.js")
     response_js  = filemd5("${path.module}/../../../backend/src/utils/response.js")
   }
 
@@ -462,7 +463,7 @@ resource "aws_lambda_function" "post_confirmation" {
       AWS_NODEJS_CONNECTION_REUSE_ENABLED = "1"
       TASKS_TABLE_NAME     = var.tasks_table_name
       USERS_TABLE_NAME     = var.users_table_name
-      SES_FROM_EMAIL       = var.ses_from_email
+      SNS_TOPIC_ARN        = var.sns_topic_arn
       AWS_REGION_NAME      = var.aws_region
       CORS_ALLOWED_ORIGIN  = var.cors_allowed_origin
     }

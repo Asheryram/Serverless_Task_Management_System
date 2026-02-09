@@ -96,7 +96,7 @@ function TaskDetail() {
 
   const handleDelete = async () => {
     try {
-      await taskApi.deleteTask(taskId);
+      await taskApi.delete(taskId);
       toast.success('Task deleted successfully');
       navigate('/tasks');
     } catch (error) {
@@ -114,7 +114,7 @@ function TaskDetail() {
 
   const handleAssignSubmit = async () => {
     try {
-      await taskApi.assignTask(taskId, selectedMembers);
+      await taskApi.assign(taskId, selectedMembers);
       toast.success('Task assigned successfully');
       setShowAssignModal(false);
       fetchTask();

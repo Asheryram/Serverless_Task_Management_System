@@ -55,6 +55,15 @@ variable "admin_email" {
 }
 
 # ============================================================================
+# SNS VARIABLES
+# ============================================================================
+variable "notification_emails" {
+  description = "List of email addresses to subscribe to SNS notifications"
+  type        = list(string)
+  default     = []
+}
+
+# ============================================================================
 # API GATEWAY VARIABLES
 # ============================================================================
 variable "cors_allowed_origins" {

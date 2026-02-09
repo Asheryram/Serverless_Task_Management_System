@@ -83,6 +83,16 @@ module "ses" {
 }
 
 # ============================================================================
+# SNS - Notifications
+# ============================================================================
+module "sns" {
+  source = "./modules/sns"
+
+  project_name        = "${local.name_prefix}-${local.name_suffix}"
+  notification_emails = var.notification_emails
+}
+
+# ============================================================================
 # LAMBDA - Business Logic
 # ============================================================================
 module "lambda" {
@@ -96,7 +106,7 @@ module "lambda" {
   tasks_table_arn      = module.dynamodb.tasks_table_arn
   users_table_name     = module.dynamodb.users_table_name
   users_table_arn      = module.dynamodb.users_table_arn
-  ses_from_email            = var.ses_from_email
+  sns_topic_arn             = module.sns.topic_arn
   cognito_user_pool_id      = module.cognito.user_pool_id
   task_assignments_table_arn = module.dynamodb.task_assignments_table_arn
   cors_allowed_origin       = try(var.cors_allowed_origins[0], "*")

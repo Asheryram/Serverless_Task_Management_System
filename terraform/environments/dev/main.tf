@@ -29,9 +29,14 @@ module "task_management" {
     "http://localhost:3000"
   ]
 
-  # SES - Update these with your verified emails
+  # SES - Still used by Cognito for verification emails
   ses_from_email = "yram.tetteh-abotsi@amalitech.com"
-  admin_email    = "yram.tetteh-abotsi@amalitech.com"  # Add your admin email
+  admin_email    = "yram.tetteh-abotsi@amalitech.com"
+
+  # SNS - Email addresses to receive task notifications
+  notification_emails = [
+    "yram.tetteh-abotsi@amalitech.com"
+  ]
 
   # CORS
   cors_allowed_origins = [
