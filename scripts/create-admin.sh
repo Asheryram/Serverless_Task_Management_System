@@ -34,9 +34,10 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 print_header "Create Admin User"
 
-# Get Cognito User Pool ID from Terraform
-cd "$PROJECT_ROOT/terraform"
+# Get Cognito User Pool ID and Region from Terraform
+cd "$PROJECT_ROOT/terraform/environments/dev"
 USER_POOL_ID=$(terraform output -raw cognito_user_pool_id 2>/dev/null || echo "")
+AWS_REGION=$(terraform output -raw aws_region 2>/dev/null || echo "eu-central-1")
 
 if [ -z "$USER_POOL_ID" ]; then
     print_message $RED "Error: Could not get User Pool ID. Make sure infrastructure is deployed."
@@ -44,6 +45,7 @@ if [ -z "$USER_POOL_ID" ]; then
 fi
 
 print_message $GREEN "User Pool ID: $USER_POOL_ID"
+print_message $GREEN "AWS Region: $AWS_REGION"
 echo ""
 
 # Get user details
@@ -70,7 +72,8 @@ aws cognito-idp admin-create-user \
         Name=email_verified,Value=true \
         Name=name,Value="$NAME" \
     --temporary-password "$PASSWORD" \
-    --message-action SUPPRESS
+    --message-action SUPPRESS \
+    --region "$AWS_REGION"
 
 print_message $GREEN "✓ User created"
 
@@ -80,7 +83,8 @@ print_message $YELLOW "Adding user to Admins group..."
 aws cognito-idp admin-add-user-to-group \
     --user-pool-id "$USER_POOL_ID" \
     --username "$EMAIL" \
-    --group-name "Admins"
+    --group-name "Admins" \
+    --region "$AWS_REGION"
 
 print_message $GREEN "✓ User added to Admins group"
 

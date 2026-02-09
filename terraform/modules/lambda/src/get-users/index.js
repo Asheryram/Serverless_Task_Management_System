@@ -1,51 +1,10 @@
 // Get Users Lambda Handler
 // Only admins can list users
 
-const { CognitoIdentityProviderClient, ListUsersCommand, ListUsersInGroupCommand, AdminListGroupsForUserCommand } = require('@aws-sdk/client-cognito-identity-provider');
+const { listUsers } = require('shared/services/cognito');
+const { response, getUserFromEvent, isAdmin } = require('shared/utils/response');
 
-const cognitoClient = new CognitoIdentityProviderClient({});
 
-const COGNITO_USER_POOL_ID = process.env.COGNITO_USER_POOL_ID;
-
-// Response helper
-const response = (statusCode, body, headers = {}) => ({
-  statusCode,
-  headers: {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE',
-    ...headers
-  },
-  body: JSON.stringify(body)
-});
-
-// Extract user info from JWT claims
-const getUserFromEvent = (event) => {
-  const claims = event.requestContext?.authorizer?.claims;
-  if (!claims) return null;
-  
-  return {
-    userId: claims.sub,
-    email: claims.email,
-    groups: claims['cognito:groups'] ? claims['cognito:groups'].split(',') : [],
-    name: claims.name || claims.email
-  };
-};
-
-// Check if user is admin
-const isAdmin = (user) => {
-  return user?.groups?.includes('Admins');
-};
-
-// Parse Cognito user attributes
-const parseUserAttributes = (attributes) => {
-  const parsed = {};
-  for (const attr of attributes || []) {
-    parsed[attr.Name] = attr.Value;
-  }
-  return parsed;
-};
 
 exports.handler = async (event) => {
   console.log('Event:', JSON.stringify(event, null, 2));
@@ -66,68 +25,17 @@ exports.handler = async (event) => {
     const queryParams = event.queryStringParameters || {};
     const group = queryParams.group; // 'Admins' or 'Members'
     
-    let users = [];
+    // List users using service
+    const users = await listUsers();
     
+    // Filter by group if specified
+    let filteredUsers = users;
     if (group) {
-      // List users in specific group
-      const result = await cognitoClient.send(new ListUsersInGroupCommand({
-        UserPoolId: COGNITO_USER_POOL_ID,
-        GroupName: group
-      }));
-      
-      users = result.Users?.map(cognitoUser => {
-        const attrs = parseUserAttributes(cognitoUser.Attributes);
-        return {
-          userId: attrs.sub,
-          email: attrs.email,
-          name: attrs.name || attrs.email,
-          enabled: cognitoUser.Enabled,
-          status: cognitoUser.UserStatus,
-          createdAt: cognitoUser.UserCreateDate?.toISOString(),
-          group: group
-        };
-      }) || [];
-    } else {
-      // List all users
-      const result = await cognitoClient.send(new ListUsersCommand({
-        UserPoolId: COGNITO_USER_POOL_ID
-      }));
-      
-      // Get groups for each user
-      users = await Promise.all(result.Users?.map(async (cognitoUser) => {
-        const attrs = parseUserAttributes(cognitoUser.Attributes);
-        
-        // Fetch user's groups
-        let role = 'member'; // default
-        try {
-          const groupsResult = await cognitoClient.send(new AdminListGroupsForUserCommand({
-            UserPoolId: COGNITO_USER_POOL_ID,
-            Username: cognitoUser.Username
-          }));
-          const groups = groupsResult.Groups?.map(g => g.GroupName) || [];
-          if (groups.includes('Admins')) {
-            role = 'admin';
-          } else if (groups.includes('Members')) {
-            role = 'member';
-          }
-        } catch (err) {
-          console.log('Error getting groups for user:', cognitoUser.Username, err);
-        }
-        
-        return {
-          userId: attrs.sub,
-          email: attrs.email,
-          name: attrs.name || attrs.email,
-          enabled: cognitoUser.Enabled,
-          status: cognitoUser.UserStatus,
-          createdAt: cognitoUser.UserCreateDate?.toISOString(),
-          role: role
-        };
-      }) || []);
+      filteredUsers = users.filter(u => u.group === group);
     }
     
-    // Filter out disabled/inactive users if needed
-    const activeUsers = users.filter(u => u.enabled !== false);
+    // Filter out disabled/inactive users
+    const activeUsers = filteredUsers.filter(u => u.enabled !== false);
     
     return response(200, {
       users: activeUsers,

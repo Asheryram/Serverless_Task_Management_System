@@ -2,11 +2,11 @@
 const awsConfig = {
   Auth: {
     Cognito: {
-      userPoolId: 'eu-central-1_kGT5eTTVO',
-      userPoolClientId: '3372nmufgaj6ccns4pbiuo83un',
+      userPoolId: process.env.REACT_APP_USER_POOL_ID ,
+      userPoolClientId: process.env.REACT_APP_CLIENT_ID ,
       loginWith: {
         oauth: {
-          domain: 'tms-dev-auth-ff1db3da.auth.eu-central-1.amazoncognito.com',
+          domain: process.env.REACT_APP_COGNITO_DOMAIN ,
           scopes: ['email', 'openid', 'profile'],
           redirectSignIn: [window.location.origin],
           redirectSignOut: [window.location.origin],
@@ -18,8 +18,8 @@ const awsConfig = {
   API: {
     REST: {
       TaskAPI: {
-        endpoint: 'https://q60vvgkbq2.execute-api.eu-central-1.amazonaws.com/dev',
-        region: 'eu-central-1'
+        endpoint: process.env.REACT_APP_API_URL ,
+        region: process.env.REACT_APP_REGION 
       }
     }
   }

@@ -136,6 +136,24 @@ resource "aws_iam_role_policy" "lambda_cognito" {
 }
 
 # ============================================================================
+# LAMBDA LAYER FOR SHARED SERVICES
+# ============================================================================
+resource "aws_lambda_layer_version" "shared_services" {
+  layer_name          = "${var.name_prefix}-shared-services-${var.name_suffix}"
+  description         = "Shared services and utilities for Lambda functions"
+  compatible_runtimes = [local.lambda_runtime]
+
+  filename         = data.archive_file.shared_layer.output_path
+  source_code_hash = data.archive_file.shared_layer.output_base64sha256
+}
+
+data "archive_file" "shared_layer" {
+  type        = "zip"
+  output_path = "${path.module}/shared-services-layer.zip"
+  source_dir  = "${path.module}/layer"
+}
+
+# ============================================================================
 # LAMBDA LAYER FOR SHARED DEPENDENCIES
 # ============================================================================
 resource "aws_lambda_layer_version" "dependencies" {
@@ -181,6 +199,8 @@ resource "aws_lambda_function" "create_task" {
   filename         = data.archive_file.create_task.output_path
   source_code_hash = data.archive_file.create_task.output_base64sha256
 
+  layers = [aws_lambda_layer_version.shared_services.arn]
+
   environment {
     variables = local.common_env_vars
   }
@@ -210,6 +230,8 @@ resource "aws_lambda_function" "get_tasks" {
 
   filename         = data.archive_file.get_tasks.output_path
   source_code_hash = data.archive_file.get_tasks.output_base64sha256
+
+  layers = [aws_lambda_layer_version.shared_services.arn]
 
   environment {
     variables = local.common_env_vars
@@ -241,6 +263,8 @@ resource "aws_lambda_function" "get_task" {
   filename         = data.archive_file.get_task.output_path
   source_code_hash = data.archive_file.get_task.output_base64sha256
 
+  layers = [aws_lambda_layer_version.shared_services.arn]
+
   environment {
     variables = local.common_env_vars
   }
@@ -270,6 +294,8 @@ resource "aws_lambda_function" "update_task" {
 
   filename         = data.archive_file.update_task.output_path
   source_code_hash = data.archive_file.update_task.output_base64sha256
+
+  layers = [aws_lambda_layer_version.shared_services.arn]
 
   environment {
     variables = local.common_env_vars
@@ -301,6 +327,8 @@ resource "aws_lambda_function" "delete_task" {
   filename         = data.archive_file.delete_task.output_path
   source_code_hash = data.archive_file.delete_task.output_base64sha256
 
+  layers = [aws_lambda_layer_version.shared_services.arn]
+
   environment {
     variables = local.common_env_vars
   }
@@ -330,6 +358,8 @@ resource "aws_lambda_function" "assign_task" {
 
   filename         = data.archive_file.assign_task.output_path
   source_code_hash = data.archive_file.assign_task.output_base64sha256
+
+  layers = [aws_lambda_layer_version.shared_services.arn]
 
   environment {
     variables = local.common_env_vars
@@ -361,6 +391,8 @@ resource "aws_lambda_function" "update_status" {
   filename         = data.archive_file.update_status.output_path
   source_code_hash = data.archive_file.update_status.output_base64sha256
 
+  layers = [aws_lambda_layer_version.shared_services.arn]
+
   environment {
     variables = local.common_env_vars
   }
@@ -391,6 +423,8 @@ resource "aws_lambda_function" "get_users" {
   filename         = data.archive_file.get_users.output_path
   source_code_hash = data.archive_file.get_users.output_base64sha256
 
+  layers = [aws_lambda_layer_version.shared_services.arn]
+
   environment {
     variables = local.common_env_vars
   }
@@ -420,6 +454,8 @@ resource "aws_lambda_function" "post_confirmation" {
 
   filename         = data.archive_file.post_confirmation.output_path
   source_code_hash = data.archive_file.post_confirmation.output_base64sha256
+
+  layers = [aws_lambda_layer_version.shared_services.arn]
 
   environment {
     variables = local.common_env_vars

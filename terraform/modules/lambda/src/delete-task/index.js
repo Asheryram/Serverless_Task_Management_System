@@ -1,44 +1,10 @@
 // Delete Task Lambda Handler
 // Only admins can delete tasks
 
-const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, GetCommand, DeleteCommand } = require('@aws-sdk/lib-dynamodb');
+const { getTaskById, deleteTask } = require('shared/services/dynamodb');
+const { response, getUserFromEvent, isAdmin } = require('shared/utils/response');
 
-const client = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(client);
 
-const TASKS_TABLE = process.env.TASKS_TABLE_NAME;
-
-// Response helper
-const response = (statusCode, body, headers = {}) => ({
-  statusCode,
-  headers: {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE',
-    ...headers
-  },
-  body: JSON.stringify(body)
-});
-
-// Extract user info from JWT claims
-const getUserFromEvent = (event) => {
-  const claims = event.requestContext?.authorizer?.claims;
-  if (!claims) return null;
-  
-  return {
-    userId: claims.sub,
-    email: claims.email,
-    groups: claims['cognito:groups'] ? claims['cognito:groups'].split(',') : [],
-    name: claims.name || claims.email
-  };
-};
-
-// Check if user is admin
-const isAdmin = (user) => {
-  return user?.groups?.includes('Admins');
-};
 
 exports.handler = async (event) => {
   console.log('Event:', JSON.stringify(event, null, 2));
@@ -61,21 +27,15 @@ exports.handler = async (event) => {
       return response(400, { message: 'Task ID is required' });
     }
     
-    // Check if task exists
-    const existing = await docClient.send(new GetCommand({
-      TableName: TASKS_TABLE,
-      Key: { taskId }
-    }));
+    // Check if task exists using service
+    const task = await getTaskById(taskId);
     
-    if (!existing.Item) {
+    if (!task) {
       return response(404, { message: 'Task not found' });
     }
     
-    // Delete task from DynamoDB
-    await docClient.send(new DeleteCommand({
-      TableName: TASKS_TABLE,
-      Key: { taskId }
-    }));
+    // Delete task using service
+    await deleteTask(taskId);
     
     console.log('Task deleted:', taskId);
     

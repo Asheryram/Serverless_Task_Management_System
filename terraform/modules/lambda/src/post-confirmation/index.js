@@ -1,16 +1,8 @@
 // Post Confirmation Lambda Handler (Cognito Trigger)
 // Saves user to DynamoDB after email verification
 
-const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, PutCommand, GetCommand } = require('@aws-sdk/lib-dynamodb');
-const { CognitoIdentityProviderClient, AdminAddUserToGroupCommand } = require('@aws-sdk/client-cognito-identity-provider');
-
-const dynamoClient = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(dynamoClient);
-const cognitoClient = new CognitoIdentityProviderClient({});
-
-const USERS_TABLE = process.env.USERS_TABLE_NAME;
-const COGNITO_USER_POOL_ID = process.env.COGNITO_USER_POOL_ID;
+const { createUser, getUserById } = require('shared/services/dynamodb');
+const { addUserToGroup } = require('shared/services/cognito');
 
 exports.handler = async (event) => {
   console.log('Event:', JSON.stringify(event, null, 2));
@@ -29,50 +21,34 @@ exports.handler = async (event) => {
     const email = userAttributes.email;
     const name = userAttributes.name || email;
     
-    // Check if user already exists
-    const existing = await docClient.send(new GetCommand({
-      TableName: USERS_TABLE,
-      Key: { userId }
-    }));
+    // Check if user already exists using service
+    const existing = await getUserById(userId);
     
-    if (existing.Item) {
+    if (existing) {
       console.log('User already exists:', userId);
       return event;
     }
     
-    // Determine role - default to MEMBER
-    // Admins need to be manually added to Admin group
-    const role = 'MEMBER';
-    
-    // Create user record in DynamoDB
+    // Create user record using service
     const user = {
       userId,
       email,
       name,
-      role,
+      role: 'MEMBER',
       isActive: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
     
-    await docClient.send(new PutCommand({
-      TableName: USERS_TABLE,
-      Item: user
-    }));
-    
+    await createUser(user);
     console.log('User created in DynamoDB:', userId);
     
-    // Add user to Members group by default
+    // Add user to Members group using service
     try {
-      await cognitoClient.send(new AdminAddUserToGroupCommand({
-        UserPoolId: userPoolId,
-        Username: userName,
-        GroupName: 'Members'
-      }));
+      await addUserToGroup(userName, 'Members');
       console.log('User added to Members group');
     } catch (groupError) {
       console.error('Error adding user to group:', groupError);
-      // Don't fail the signup if group assignment fails
     }
     
     return event;

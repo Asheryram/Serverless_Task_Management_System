@@ -3,128 +3,14 @@
 // Admins can update any task status
 // Notifies admin and all assigned members on status change
 
-const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
-const { DynamoDBDocumentClient, GetCommand, UpdateCommand } = require('@aws-sdk/lib-dynamodb');
-const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
-const { CognitoIdentityProviderClient, AdminGetUserCommand, ListUsersInGroupCommand } = require('@aws-sdk/client-cognito-identity-provider');
-
-const dynamoClient = new DynamoDBClient({});
-const docClient = DynamoDBDocumentClient.from(dynamoClient);
-const sesClient = new SESClient({});
-const cognitoClient = new CognitoIdentityProviderClient({});
-
-const TASKS_TABLE = process.env.TASKS_TABLE_NAME;
-const SES_FROM_EMAIL = process.env.SES_FROM_EMAIL;
-const COGNITO_USER_POOL_ID = process.env.COGNITO_USER_POOL_ID;
+const { getTaskById, updateTask } = require('shared/services/dynamodb');
+const { getUserEmail } = require('shared/services/cognito');
+const { sendStatusUpdateEmail } = require('shared/services/email');
+const { response, getUserFromEvent, isAdmin } = require('shared/utils/response');
 
 const VALID_STATUSES = ['OPEN', 'IN_PROGRESS', 'COMPLETED', 'CLOSED'];
 
-// Response helper
-const response = (statusCode, body, headers = {}) => ({
-  statusCode,
-  headers: {
-    'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization',
-    'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE',
-    ...headers
-  },
-  body: JSON.stringify(body)
-});
 
-// Extract user info from JWT claims
-const getUserFromEvent = (event) => {
-  const claims = event.requestContext?.authorizer?.claims;
-  if (!claims) return null;
-  
-  return {
-    userId: claims.sub,
-    email: claims.email,
-    groups: claims['cognito:groups'] ? claims['cognito:groups'].split(',') : [],
-    name: claims.name || claims.email
-  };
-};
-
-// Check if user is admin
-const isAdmin = (user) => {
-  return user?.groups?.includes('Admins');
-};
-
-// Get user email from Cognito
-const getUserEmail = async (userId) => {
-  try {
-    const result = await cognitoClient.send(new AdminGetUserCommand({
-      UserPoolId: COGNITO_USER_POOL_ID,
-      Username: userId
-    }));
-    
-    const emailAttr = result.UserAttributes?.find(attr => attr.Name === 'email');
-    return emailAttr?.Value;
-  } catch (error) {
-    console.error('Error getting user email:', error);
-    return null;
-  }
-};
-
-// Get all admin user IDs
-const getAdminUserIds = async () => {
-  try {
-    const result = await cognitoClient.send(new ListUsersInGroupCommand({
-      UserPoolId: COGNITO_USER_POOL_ID,
-      GroupName: 'Admins'
-    }));
-    
-    return result.Users?.map(u => {
-      const subAttr = u.Attributes?.find(attr => attr.Name === 'sub');
-      return subAttr?.Value;
-    }).filter(Boolean) || [];
-  } catch (error) {
-    console.error('Error getting admin users:', error);
-    return [];
-  }
-};
-
-// Send status update email
-const sendStatusUpdateEmail = async (toEmail, task, oldStatus, newStatus, updaterName) => {
-  try {
-    await sesClient.send(new SendEmailCommand({
-      Source: SES_FROM_EMAIL,
-      Destination: {
-        ToAddresses: [toEmail]
-      },
-      Message: {
-        Subject: {
-          Data: `Task Status Updated: ${task.title}`
-        },
-        Body: {
-          Html: {
-            Data: `
-              <html>
-                <body>
-                  <h2>Task Status Update</h2>
-                  <p><strong>Task:</strong> ${task.title}</p>
-                  <p><strong>Previous Status:</strong> ${oldStatus}</p>
-                  <p><strong>New Status:</strong> ${newStatus}</p>
-                  <p><strong>Updated by:</strong> ${updaterName}</p>
-                  <br/>
-                  <p>Please log in to the Task Management System to view more details.</p>
-                </body>
-              </html>
-            `
-          },
-          Text: {
-            Data: `Task Status Update\n\nTask: ${task.title}\nPrevious Status: ${oldStatus}\nNew Status: ${newStatus}\nUpdated by: ${updaterName}\n\nPlease log in to the Task Management System to view more details.`
-          }
-        }
-      }
-    }));
-    console.log('Status update email sent to:', toEmail);
-    return true;
-  } catch (error) {
-    console.error('Error sending email:', error);
-    return false;
-  }
-};
 
 exports.handler = async (event) => {
   console.log('Event:', JSON.stringify(event, null, 2));
@@ -153,17 +39,12 @@ exports.handler = async (event) => {
       });
     }
     
-    // Get existing task
-    const existing = await docClient.send(new GetCommand({
-      TableName: TASKS_TABLE,
-      Key: { taskId }
-    }));
+    // Get existing task using service
+    const task = await getTaskById(taskId);
     
-    if (!existing.Item) {
+    if (!task) {
       return response(404, { message: 'Task not found' });
     }
-    
-    const task = existing.Item;
     const oldStatus = task.status;
     
     // Check authorization
@@ -189,46 +70,30 @@ exports.handler = async (event) => {
       return response(400, { message: 'Task already has this status' });
     }
     
-    // Update task status
-    const result = await docClient.send(new UpdateCommand({
-      TableName: TASKS_TABLE,
-      Key: { taskId },
-      UpdateExpression: 'SET #status = :status, updatedAt = :updatedAt, lastStatusUpdate = :lastUpdate',
-      ExpressionAttributeNames: {
-        '#status': 'status'
-      },
-      ExpressionAttributeValues: {
-        ':status': status,
-        ':updatedAt': new Date().toISOString(),
-        ':lastUpdate': {
-          from: oldStatus,
-          to: status,
-          updatedBy: user.userId,
-          updatedByName: user.name,
-          updatedAt: new Date().toISOString()
-        }
-      },
-      ReturnValues: 'ALL_NEW'
-    }));
+    // Update task status using service
+    const updatedTask = await updateTask(taskId, {
+      status,
+      lastStatusUpdate: {
+        from: oldStatus,
+        to: status,
+        updatedBy: user.userId,
+        updatedByName: user.name,
+        updatedAt: new Date().toISOString()
+      }
+    });
     
-    // Get all admin user IDs
-    const adminIds = await getAdminUserIds();
-    
-    // Collect all email recipients (admins + assigned members + task creator)
+    // Collect recipient IDs (assigned members + task creator)
     const recipientIds = new Set([
-      ...adminIds,
       ...task.assignedMembers || [],
       task.createdBy
     ]);
+    recipientIds.delete(user.userId); // Remove updater
     
-    // Remove the user who made the update (they don't need notification)
-    recipientIds.delete(user.userId);
-    
-    // Send email notifications
+    // Send email notifications using service
     const emailPromises = [...recipientIds].map(async (userId) => {
       const email = await getUserEmail(userId);
       if (email) {
-        await sendStatusUpdateEmail(email, task, oldStatus, status, user.name);
+        await sendStatusUpdateEmail({ toEmail: email, task, oldStatus, newStatus: status, updaterName: user.name });
       }
     });
     
@@ -238,7 +103,7 @@ exports.handler = async (event) => {
     
     return response(200, {
       message: 'Task status updated successfully',
-      task: result.Attributes,
+      task: updatedTask,
       previousStatus: oldStatus
     });
     

@@ -28,7 +28,7 @@ print_header() {
     echo ""
 }
 
-AWS_REGION="${AWS_REGION:-us-east-1}"
+AWS_REGION="${AWS_REGION:-eu-central-1}"
 
 print_header "SES Email Setup"
 

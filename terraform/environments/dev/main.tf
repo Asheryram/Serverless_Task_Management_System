@@ -31,7 +31,7 @@ module "task_management" {
 
   # SES - Update these with your verified emails
   ses_from_email = "yram.tetteh-abotsi@amalitech.com"
-  admin_email    = "yram.tetteh-abotsi@amalitech.com"  # Add your admin email
+  admin_email    = "yram.tetteh-abotsi@amalitech.com"  
 
   # CORS
   cors_allowed_origins = [
@@ -68,4 +68,8 @@ output "amplify_url" {
 
 output "frontend_config" {
   value = module.task_management.frontend_config
+}
+
+output "aws_region" {
+  value = "eu-central-1"
 }
