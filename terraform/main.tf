@@ -108,6 +108,7 @@ module "lambda" {
   users_table_arn      = module.dynamodb.users_table_arn
   sns_topic_arn             = module.sns.topic_arn
   cognito_user_pool_id      = module.cognito.user_pool_id
+  task_assignments_table_name = module.dynamodb.task_assignments_table_name
   task_assignments_table_arn = module.dynamodb.task_assignments_table_arn
   cors_allowed_origin       = try(var.cors_allowed_origins[0], "*")
 }

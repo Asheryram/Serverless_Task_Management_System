@@ -48,6 +48,11 @@ variable "cognito_user_pool_id" {
   type        = string
 }
 
+variable "task_assignments_table_name" {
+  description = "DynamoDB task assignments table name"
+  type        = string
+}
+
 variable "task_assignments_table_arn" {
   description = "DynamoDB task assignments table ARN"
   type        = string

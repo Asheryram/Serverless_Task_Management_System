@@ -11,6 +11,7 @@ locals {
     AWS_NODEJS_CONNECTION_REUSE_ENABLED = "1"
     TASKS_TABLE_NAME     = var.tasks_table_name
     USERS_TABLE_NAME     = var.users_table_name
+    TASK_ASSIGNMENTS_TABLE_NAME = var.task_assignments_table_name
     SNS_TOPIC_ARN        = var.sns_topic_arn
     COGNITO_USER_POOL_ID = var.cognito_user_pool_id
     AWS_REGION_NAME      = var.aws_region
