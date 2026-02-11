@@ -1,23 +1,8 @@
-# Development Environment Variables
-# Copy this file to terraform.tfvars and fill in your values
-
-# AWS Configuration
-aws_region  = "us-east-1"
+aws_region  = "eu-central-1"
 environment = "dev"
 
-# Email Configuration
-# IMPORTANT: These emails must be verified in SES before use
-ses_from_email = "noreply@amalitech.com"
-admin_email    = "admin@amalitech.com"
+allowed_email_domains = ["yourdomain.com"]
 
-# GitHub Configuration (for Amplify)
-# IMPORTANT: Generate a GitHub Personal Access Token with repo scope
-frontend_repository_url = "https://github.com/your-username/task-management-frontend"
-github_access_token     = "ghp_your_token_here"
-frontend_branch_name    = "main"
-
-# Cognito Callback URLs
-# Update these when you have your Amplify URL
 cognito_callback_urls = [
   "http://localhost:3000/callback",
   "http://localhost:3000"
@@ -28,7 +13,16 @@ cognito_logout_urls = [
   "http://localhost:3000"
 ]
 
-# CORS Origins
+ses_from_email = "noreply@yourdomain.com"
+admin_email    = "admin@yourdomain.com"
+
+notification_emails = ["admin@yourdomain.com"]
+
 cors_allowed_origins = [
-  "http://localhost:3000"
+  "http://localhost:3000",
+  "https://localhost:3000"
 ]
+
+frontend_repository_url = "https://github.com/username/repo"
+github_access_token     = "ghp_xxxxxxxxxxxxxxxxxxxx"
+frontend_branch_name    = "main"

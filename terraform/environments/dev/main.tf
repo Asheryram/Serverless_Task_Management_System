@@ -15,62 +15,26 @@ module "task_management" {
   source = "../../"
 
   # General
-  aws_region  = "eu-central-1"
-  environment = "dev"
+  aws_region  = var.aws_region
+  environment = var.environment
 
   # Cognito
-  allowed_email_domains = ["amalitech.com", "amalitechtraining.org"]
-  cognito_callback_urls = [
-    "http://localhost:3000/callback",
-    "http://localhost:3000"
-  ]
-  cognito_logout_urls = [
-    "http://localhost:3000/logout",
-    "http://localhost:3000"
-  ]
+  allowed_email_domains = var.allowed_email_domains
+  cognito_callback_urls = var.cognito_callback_urls
+  cognito_logout_urls   = var.cognito_logout_urls
 
-  # SES - Still used by Cognito for verification emails
-  ses_from_email = "yram.tetteh-abotsi@amalitech.com"
-  admin_email    = "yram.tetteh-abotsi@amalitech.com"
+  # SES
+  ses_from_email = var.ses_from_email
+  admin_email    = var.admin_email
 
-  # SNS - Email addresses to receive task notifications
-  notification_emails = [
-    "yram.tetteh-abotsi@amalitech.com"
-  ]
+  # SNS
+  notification_emails = var.notification_emails
 
   # CORS
-  cors_allowed_origins = [
-    "http://localhost:3000",
-    "https://localhost:3000"
-  ]
+  cors_allowed_origins = var.cors_allowed_origins
 
-  # Amplify - Update with your repository details
-  frontend_repository_url = ""  # e.g., "https://github.com/username/repo"
-  github_access_token     = ""  # Your GitHub PAT
-  frontend_branch_name    = "main"
-}
-
-# Outputs
-output "api_url" {
-  value = module.task_management.api_gateway_url
-}
-
-output "cognito_user_pool_id" {
-  value = module.task_management.cognito_user_pool_id
-}
-
-output "cognito_client_id" {
-  value = module.task_management.cognito_user_pool_client_id
-}
-
-output "cognito_domain" {
-  value = module.task_management.cognito_domain
-}
-
-output "amplify_url" {
-  value = module.task_management.amplify_branch_url
-}
-
-output "frontend_config" {
-  value = module.task_management.frontend_config
+  # Amplify
+  frontend_repository_url = var.frontend_repository_url
+  github_access_token     = var.github_access_token
+  frontend_branch_name    = var.frontend_branch_name
 }
