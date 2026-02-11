@@ -1,31 +1,14 @@
-# Amplify Module - Frontend Hosting
-# Hosts the React application
-# Note: When repository_url is empty, this creates a manual deployment app
+locals {
+  has_repository = var.repository_url != "" && var.github_access_token != ""
+}
 
 resource "aws_amplify_app" "main" {
-  name = "${var.name_prefix}-frontend-${var.name_suffix}"
+  name         = "${var.name_prefix}-frontend-${var.name_suffix}"
+  repository   = local.has_repository ? var.repository_url : null
+  access_token = local.has_repository ? var.github_access_token : null
 
-  # Build settings for manual deployment
-  build_spec = <<-EOT
-    version: 1
-    frontend:
-      phases:
-        preBuild:
-          commands:
-            - npm ci
-        build:
-          commands:
-            - npm run build
-      artifacts:
-        baseDirectory: build
-        files:
-          - '**/*'
-      cache:
-        paths:
-          - node_modules/**/*
-  EOT
+  build_spec = file("${path.module}/../../../amplify.yml")
 
-  # Environment variables for the frontend
   environment_variables = {
     REACT_APP_API_URL              = var.api_gateway_url
     REACT_APP_COGNITO_USER_POOL_ID = var.cognito_user_pool_id
@@ -35,7 +18,6 @@ resource "aws_amplify_app" "main" {
     _LIVE_UPDATES                  = "[{\"pkg\":\"node\",\"type\":\"nvm\",\"version\":\"18\"}]"
   }
 
-  # Custom rules for SPA routing
   custom_rule {
     source = "</^[^.]+$|\\.(?!(css|gif|ico|jpg|js|png|txt|svg|woff|woff2|ttf|map|json)$)([^.]+$)/>"
     target = "/index.html"
@@ -54,10 +36,10 @@ resource "aws_amplify_app" "main" {
   }
 }
 
-# Branch for manual deployment
 resource "aws_amplify_branch" "main" {
-  app_id      = aws_amplify_app.main.id
-  branch_name = var.branch_name
+  app_id            = aws_amplify_app.main.id
+  branch_name       = var.branch_name
+  enable_auto_build = local.has_repository  # only auto-build if GitHub is connected
 
   framework = "React"
   stage     = var.environment == "prod" ? "PRODUCTION" : "DEVELOPMENT"
