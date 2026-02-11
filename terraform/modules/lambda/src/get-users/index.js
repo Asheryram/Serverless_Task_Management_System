@@ -10,11 +10,11 @@ exports.handler = async (event) => {
   try {
     const user = getUserFromEvent(event);
     if (!user) {
-      return error('Unauthorized', 401);
+      return error('Unauthorized', 401, null, event);
     }
 
     if (!isAdmin(user)) {
-      return error('Only admins can list users', 403);
+      return error('Only admins can list users', 403, null, event);
     }
 
     const group = getQueryParam(event, 'group');
@@ -46,9 +46,9 @@ exports.handler = async (event) => {
     return success({
       users: activeUsers,
       count: activeUsers.length
-    });
+    }, 200, event);
   } catch (err) {
     console.error('Error getting users:', err);
-    return error('Failed to retrieve users', 500);
+    return error('Failed to retrieve users', 500, null, event);
   }
 };

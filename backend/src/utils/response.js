@@ -1,15 +1,44 @@
 // Common utilities for Lambda functions
 
-const CORS_ORIGIN = process.env.CORS_ALLOWED_ORIGIN || '*';
+const CORS_ORIGINS = process.env.CORS_ALLOWED_ORIGINS 
+  ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : ['*'];
+
+/**
+ * Get appropriate CORS origin based on request origin
+ */
+const getCorsOrigin = (event) => {
+  const requestOrigin = event.headers?.origin || event.headers?.Origin;
+  if (!requestOrigin || CORS_ORIGINS.includes('*')) {
+    return CORS_ORIGINS[0];
+  }
+  
+  // Check exact match
+  if (CORS_ORIGINS.includes(requestOrigin)) {
+    return requestOrigin;
+  }
+  
+  // Check wildcard patterns
+  for (const pattern of CORS_ORIGINS) {
+    if (pattern.includes('*')) {
+      const regex = new RegExp('^' + pattern.replace(/\*/g, '.*') + '$');
+      if (regex.test(requestOrigin)) {
+        return requestOrigin;
+      }
+    }
+  }
+  
+  return CORS_ORIGINS[0];
+};
 
 /**
  * Standard API response helper
  */
-const response = (statusCode, body, headers = {}) => ({
+const response = (statusCode, body, headers = {}, event = null) => ({
   statusCode,
   headers: {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': CORS_ORIGIN,
+    'Access-Control-Allow-Origin': event ? getCorsOrigin(event) : CORS_ORIGINS[0],
     'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
     'Access-Control-Allow-Methods': 'OPTIONS,POST,GET,PUT,DELETE,PATCH',
     ...headers
@@ -20,15 +49,15 @@ const response = (statusCode, body, headers = {}) => ({
 /**
  * Success response
  */
-const success = (data, statusCode = 200) => response(statusCode, data);
+const success = (data, statusCode = 200, event = null) => response(statusCode, data, {}, event);
 
 /**
  * Error response
  */
-const error = (message, statusCode = 500, details = null) => {
+const error = (message, statusCode = 500, details = null, event = null) => {
   const body = { message };
   if (details) body.details = details;
-  return response(statusCode, body);
+  return response(statusCode, body, {}, event);
 };
 
 /**

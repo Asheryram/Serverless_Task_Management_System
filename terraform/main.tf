@@ -111,6 +111,7 @@ module "lambda" {
   task_assignments_table_name = module.dynamodb.task_assignments_table_name
   task_assignments_table_arn = module.dynamodb.task_assignments_table_arn
   cors_allowed_origin       = try(var.cors_allowed_origins[0], "*")
+  cors_allowed_origins      = concat(var.cors_allowed_origins, ["https://*.amplifyapp.com"])
 }
 
 # ============================================================================

@@ -63,3 +63,9 @@ variable "cors_allowed_origin" {
   type        = string
   default     = "*"
 }
+
+variable "cors_allowed_origins" {
+  description = "List of allowed CORS origins for Lambda responses"
+  type        = list(string)
+  default     = []
+}

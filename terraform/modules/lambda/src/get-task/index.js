@@ -10,29 +10,29 @@ exports.handler = async (event) => {
   try {
     const user = getUserFromEvent(event);
     if (!user) {
-      return error('Unauthorized', 401);
+      return error('Unauthorized', 401, null, event);
     }
 
     const taskId = getPathParam(event, 'id');
     if (!taskId) {
-      return error('Task ID is required', 400);
+      return error('Task ID is required', 400, null, event);
     }
 
     const task = await getTaskById(taskId);
 
     if (!task) {
-      return error('Task not found', 404);
+      return error('Task not found', 404, null, event);
     }
 
     if (!isAdmin(user)) {
       if (!task.assignedMembers?.includes(user.userId)) {
-        return error('You are not assigned to this task', 403);
+        return error('You are not assigned to this task', 403, null, event);
       }
     }
 
-    return success({ task });
+    return success({ task }, 200, event);
   } catch (err) {
     console.error('Error getting task:', err);
-    return error('Failed to retrieve task', 500);
+    return error('Failed to retrieve task', 500, null, event);
   }
 };

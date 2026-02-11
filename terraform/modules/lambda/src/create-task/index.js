@@ -11,21 +11,21 @@ exports.handler = async (event) => {
   try {
     const user = getUserFromEvent(event);
     if (!user) {
-      return error('Unauthorized', 401);
+      return error('Unauthorized', 401, null, event);
     }
 
     if (!isAdmin(user)) {
-      return error('Only admins can create tasks', 403);
+      return error('Only admins can create tasks', 403, null, event);
     }
 
     const body = parseBody(event);
 
     if (!body.title) {
-      return error('Task title is required', 400);
+      return error('Task title is required', 400, null, event);
     }
 
     if (body.priority && !isValidPriority(body.priority)) {
-      return error('Invalid priority. Must be LOW, MEDIUM, HIGH, or URGENT', 400);
+      return error('Invalid priority. Must be LOW, MEDIUM, HIGH, or URGENT', 400, null, event);
     }
 
     const now = new Date().toISOString();
@@ -49,9 +49,9 @@ exports.handler = async (event) => {
 
     console.log('Task created:', task.taskId);
 
-    return success({ message: 'Task created successfully', task }, 201);
+    return success({ message: 'Task created successfully', task }, 201, 200, event);
   } catch (err) {
     console.error('Error creating task:', err);
-    return error('Failed to create task', 500);
+    return error('Failed to create task', 500, null, event);
   }
 };

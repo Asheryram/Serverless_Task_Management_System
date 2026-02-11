@@ -15,7 +15,7 @@ locals {
     SNS_TOPIC_ARN        = var.sns_topic_arn
     COGNITO_USER_POOL_ID = var.cognito_user_pool_id
     AWS_REGION_NAME      = var.aws_region
-    CORS_ALLOWED_ORIGIN  = var.cors_allowed_origin
+    CORS_ALLOWED_ORIGINS = join(",", var.cors_allowed_origins)
   }
 }
 
@@ -466,7 +466,7 @@ resource "aws_lambda_function" "post_confirmation" {
       USERS_TABLE_NAME     = var.users_table_name
       SNS_TOPIC_ARN        = var.sns_topic_arn
       AWS_REGION_NAME      = var.aws_region
-      CORS_ALLOWED_ORIGIN  = var.cors_allowed_origin
+      CORS_ALLOWED_ORIGINS = join(",", var.cors_allowed_origins)
     }
   }
 

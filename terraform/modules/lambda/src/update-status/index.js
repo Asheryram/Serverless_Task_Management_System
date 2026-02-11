@@ -14,24 +14,24 @@ exports.handler = async (event) => {
   try {
     const user = getUserFromEvent(event);
     if (!user) {
-      return error('Unauthorized', 401);
+      return error('Unauthorized', 401, null, event);
     }
 
     const taskId = getPathParam(event, 'id');
     if (!taskId) {
-      return error('Task ID is required', 400);
+      return error('Task ID is required', 400, null, event);
     }
 
     const body = parseBody(event);
     const { status } = body;
 
     if (!status || !isValidStatus(status)) {
-      return error('Valid status is required', 400, { validStatuses: TASK_STATUSES });
+      return error('Valid status is required', 400, { validStatuses: TASK_STATUSES }, event, event);
     }
 
     const task = await getTaskById(taskId);
     if (!task) {
-      return error('Task not found', 404);
+      return error('Task not found', 404, null, event);
     }
 
     const oldStatus = task.status;
@@ -39,18 +39,18 @@ exports.handler = async (event) => {
     // Authorization checks for non-admins
     if (!isAdmin(user)) {
       if (oldStatus === 'CLOSED') {
-        return error('This task is closed and cannot be modified', 403);
+        return error('This task is closed and cannot be modified', 403, null, event);
       }
       if (!task.assignedMembers?.includes(user.userId)) {
-        return error('You are not assigned to this task', 403);
+        return error('You are not assigned to this task', 403, null, event);
       }
       if (status === 'CLOSED') {
-        return error('Only admins can close tasks', 403);
+        return error('Only admins can close tasks', 403, null, event);
       }
     }
 
     if (oldStatus === status) {
-      return error('Task already has this status', 400);
+      return error('Task already has this status', 400, null, event);
     }
 
     const updatedTask = await updateTask(taskId, {
@@ -99,9 +99,9 @@ exports.handler = async (event) => {
       message: 'Task status updated successfully',
       task: updatedTask,
       previousStatus: oldStatus
-    });
+    }, 200, event);
   } catch (err) {
     console.error('Error updating task status:', err);
-    return error('Failed to update task status', 500);
+    return error('Failed to update task status', 500, null, event);
   }
 };
