@@ -51,7 +51,6 @@ module "cognito" {
   name_prefix         = local.name_prefix
   name_suffix         = local.name_suffix
   allowed_domains     = var.allowed_email_domains
-  ses_from_email      = var.ses_from_email
   callback_urls       = var.cognito_callback_urls
   logout_urls         = var.cognito_logout_urls
 
@@ -68,18 +67,6 @@ module "dynamodb" {
   name_prefix = local.name_prefix
   name_suffix = local.name_suffix
   environment = var.environment
-}
-
-# ============================================================================
-# SES - Email Notifications
-# ============================================================================
-module "ses" {
-  source = "./modules/ses"
-
-  name_prefix    = local.name_prefix
-  domain         = var.ses_domain
-  from_email     = var.ses_from_email
-  admin_email    = var.admin_email
 }
 
 # ============================================================================
@@ -110,8 +97,7 @@ module "lambda" {
   cognito_user_pool_id      = module.cognito.user_pool_id
   task_assignments_table_name = module.dynamodb.task_assignments_table_name
   task_assignments_table_arn = module.dynamodb.task_assignments_table_arn
-  cors_allowed_origin       = try(var.cors_allowed_origins[0], "*")
-  cors_allowed_origins      = concat(var.cors_allowed_origins, ["https://*.amplifyapp.com"])
+  cors_allowed_origins       = var.cors_allowed_origins
 }
 
 # ============================================================================

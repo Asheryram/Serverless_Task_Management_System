@@ -157,7 +157,7 @@
 - Task CRUD operations (Admin only for create/delete)
 - Task assignment to members
 - Status updates with notifications
-- Email notifications via AWS SES
+- Email notifications via AWS SNS
 - Role-based access control
 
 ### Security
@@ -187,8 +187,7 @@
 | API Gateway | REST API | v1 | HTTP API endpoints |
 | Database | Amazon DynamoDB | - | NoSQL data storage |
 | Authentication | Amazon Cognito | - | User management, JWT |
-| Notifications | Amazon SES | - | Email delivery |
-| Messaging | Amazon SNS | - | Event notifications |
+| Notifications | Amazon SNS | - | Event notifications |
 | Monitoring | CloudWatch | - | Logging and metrics |
 
 ### Infrastructure Layer
@@ -578,7 +577,7 @@ Only the following email domains are allowed for signup:
 ```
 
 ### Email Notifications
-Notifications are sent via **Amazon SES** for:
+Notifications are sent via **Amazon SNS** for:
 
 1. **Task Assignment** (`assign-task` Lambda)
    - Recipient: Assigned member(s)
@@ -595,11 +594,10 @@ Notifications are sent via **Amazon SES** for:
    - Content: New task created
    - Trigger: POST /tasks
 
-### SES Configuration
-- **Domain**: Configurable via `ses_domain` variable
-- **From Email**: `noreply@amalitech.com` (configurable)
-- **Bounce Handling**: Enabled
-- **Complaint Handling**: Enabled
+### SNS Configuration
+- **Topic**: Task management notifications
+- **Subscriptions**: Email endpoints
+- **Message Format**: JSON with email content
 
 ## 🧪 Testing Strategy
 
@@ -664,11 +662,6 @@ environment = "dev"
 allowed_email_domains = ["amalitech.com", "amalitechtraining.org"]
 cognito_callback_urls = ["http://localhost:3000/callback"]
 cognito_logout_urls = ["http://localhost:3000/logout"]
-
-# SES Configuration
-ses_domain = "amalitech.com"
-ses_from_email = "noreply@amalitech.com"
-admin_email = "admin@amalitech.com"
 
 # SNS Configuration
 notification_emails = ["admin@amalitech.com"]
@@ -791,7 +784,6 @@ This project is for **educational purposes** as part of AmaliTech training progr
 - **Lambda Logs**: Function execution logs
 - **DynamoDB Metrics**: Read/write capacity, throttling
 - **Cognito Metrics**: Authentication events
-- **SES Metrics**: Email delivery, bounces, complaints
 
 ### Key Metrics to Monitor
 - API response times

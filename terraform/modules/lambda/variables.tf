@@ -58,12 +58,6 @@ variable "task_assignments_table_arn" {
   type        = string
 }
 
-variable "cors_allowed_origin" {
-  description = "Allowed CORS origin for Lambda responses"
-  type        = string
-  default     = "*"
-}
-
 variable "cors_allowed_origins" {
   description = "List of allowed CORS origins for Lambda responses"
   type        = list(string)
