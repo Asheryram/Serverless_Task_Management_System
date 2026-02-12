@@ -3,7 +3,7 @@
 // Sends email notification to assigned members
 
 const { success, error, getUserFromEvent, isAdmin, parseBody, getPathParam } = require('/opt/nodejs/shared/utils/response');
-const { getTaskById, updateTask } = require('/opt/nodejs/shared/services/dynamodb');
+const { getTaskById, updateTask, addTaskActivityLog } = require('/opt/nodejs/shared/services/dynamodb');
 const { getUserEmail } = require('/opt/nodejs/shared/services/cognito');
 const { sendTaskAssignmentEmail } = require('/opt/nodejs/shared/services/sns');
 
@@ -47,6 +47,21 @@ exports.handler = async (event) => {
     const allMembers = [...new Set([...existingMembers, ...newMembers])];
 
     const updatedTask = await updateTask(taskId, { assignedMembers: allMembers });
+
+    // Add activity log for assignment
+    try {
+      await addTaskActivityLog(taskId, {
+        action: 'MEMBERS_ASSIGNED',
+        userId: user.userId,
+        userName: user.name,
+        details: {
+          assignedMemberIds: newMembers,
+          totalMembers: allMembers.length
+        }
+      });
+    } catch (logError) {
+      console.error('Error adding activity log:', logError);
+    }
 
     // Send email notifications to new members (don't let notification failure crash the response)
     let notifiedCount = 0;

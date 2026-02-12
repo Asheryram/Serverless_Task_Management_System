@@ -2,7 +2,7 @@
 // Admins can update any task, members cannot update tasks
 
 const { success, error, getUserFromEvent, isAdmin, parseBody, getPathParam, isValidPriority } = require('/opt/nodejs/shared/utils/response');
-const { getTaskById, updateTask } = require('/opt/nodejs/shared/services/dynamodb');
+const { getTaskById, updateTask, addTaskActivityLog } = require('/opt/nodejs/shared/services/dynamodb');
 
 const ALLOWED_FIELDS = ['title', 'description', 'priority', 'dueDate', 'tags'];
 
@@ -46,7 +46,32 @@ exports.handler = async (event) => {
       return error('No valid fields to update', 400, null, event);
     }
 
+    // Track what changed for activity log
+    const changes = {};
+    for (const field of Object.keys(updates)) {
+      if (existing[field] !== updates[field]) {
+        changes[field] = {
+          from: existing[field],
+          to: updates[field]
+        };
+      }
+    }
+
     const updatedTask = await updateTask(taskId, updates);
+
+    // Add activity log if there were actual changes
+    if (Object.keys(changes).length > 0) {
+      try {
+        await addTaskActivityLog(taskId, {
+          action: 'TASK_UPDATED',
+          userId: user.userId,
+          userName: user.name,
+          details: { changes }
+        });
+      } catch (logError) {
+        console.error('Error adding activity log:', logError);
+      }
+    }
 
     console.log('Task updated:', taskId);
 

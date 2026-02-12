@@ -356,3 +356,81 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Activity Log Styles */
+.task-activity-section {
+  margin-top: 32px;
+  border-top: 1px solid var(--gray-200);
+  padding-top: 24px;
+}
+
+.task-activity-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--gray-800);
+  margin-bottom: 16px;
+}
+
+.activity-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.activity-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: var(--gray-50);
+  border-radius: var(--radius-md);
+  border-left: 3px solid var(--primary);
+}
+
+.activity-icon {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-50);
+  color: var(--primary);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.activity-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.activity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.activity-user {
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.activity-time {
+  font-size: 12px;
+  color: var(--gray-500);
+}
+
+.activity-description {
+  color: var(--gray-600);
+  font-size: 14px;
+}
+
+.activity-description strong {
+  color: var(--gray-800);
+}
+

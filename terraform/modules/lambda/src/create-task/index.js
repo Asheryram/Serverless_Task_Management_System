@@ -42,7 +42,18 @@ exports.handler = async (event) => {
       updatedAt: now,
       dueDate: body.dueDate || null,
       assignedMembers: [],
-      tags: body.tags || []
+      tags: body.tags || [],
+      activityLog: [{
+        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        timestamp: now,
+        action: 'TASK_CREATED',
+        userId: user.userId,
+        userName: user.name,
+        details: {
+          title: body.title,
+          priority: body.priority || 'MEDIUM'
+        }
+      }]
     };
 
     await createTask(task);

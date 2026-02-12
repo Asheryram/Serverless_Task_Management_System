@@ -10,7 +10,8 @@ import {
   FiClock,
   FiCheckCircle,
   FiSave,
-  FiX
+  FiX,
+  FiActivity
 } from 'react-icons/fi';
 import { toast } from 'react-toastify';
 import { useAuth } from '../context/AuthContext';
@@ -271,6 +272,53 @@ function TaskDetail() {
                 <h3>Description</h3>
                 <p>{task.description || 'No description provided.'}</p>
               </div>
+
+              {/* Activity Log - visible to admins */}
+              {isAdmin && task.activityLog && task.activityLog.length > 0 && (
+                <div className="task-activity-section">
+                  <h3><FiActivity /> Activity Log</h3>
+                  <div className="activity-timeline">
+                    {[...task.activityLog].reverse().map((activity, index) => (
+                      <div key={activity.id || index} className="activity-item">
+                        <div className="activity-icon">
+                          {activity.action === 'TASK_CREATED' && <FiCheckCircle />}
+                          {activity.action === 'TASK_UPDATED' && <FiEdit2 />}
+                          {activity.action === 'STATUS_CHANGED' && <FiFlag />}
+                          {activity.action === 'MEMBERS_ASSIGNED' && <FiUsers />}
+                        </div>
+                        <div className="activity-content">
+                          <div className="activity-header">
+                            <span className="activity-user">{activity.userName || 'Unknown'}</span>
+                            <span className="activity-time">
+                              {new Date(activity.timestamp).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="activity-description">
+                            {activity.action === 'TASK_CREATED' && (
+                              <span>Created this task</span>
+                            )}
+                            {activity.action === 'STATUS_CHANGED' && (
+                              <span>
+                                Changed status from <strong>{activity.details?.from}</strong> to <strong>{activity.details?.to}</strong>
+                              </span>
+                            )}
+                            {activity.action === 'MEMBERS_ASSIGNED' && (
+                              <span>
+                                Assigned {activity.details?.assignedMemberIds?.length || 0} member(s)
+                              </span>
+                            )}
+                            {activity.action === 'TASK_UPDATED' && (
+                              <span>
+                                Updated {Object.keys(activity.details?.changes || {}).join(', ')}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>

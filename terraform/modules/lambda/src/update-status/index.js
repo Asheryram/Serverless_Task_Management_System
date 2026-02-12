@@ -4,7 +4,7 @@
 // Notifies admin and all assigned members on status change
 
 const { success, error, getUserFromEvent, isAdmin, parseBody, getPathParam, isValidStatus, TASK_STATUSES } = require('/opt/nodejs/shared/utils/response');
-const { getTaskById, updateTask } = require('/opt/nodejs/shared/services/dynamodb');
+const { getTaskById, updateTask, addTaskActivityLog } = require('/opt/nodejs/shared/services/dynamodb');
 const { getUserEmail, listUsersInGroup } = require('/opt/nodejs/shared/services/cognito');
 const { sendStatusUpdateEmail } = require('/opt/nodejs/shared/services/sns');
 
@@ -63,6 +63,21 @@ exports.handler = async (event) => {
         updatedAt: new Date().toISOString()
       }
     });
+
+    // Add activity log for status change
+    try {
+      await addTaskActivityLog(taskId, {
+        action: 'STATUS_CHANGED',
+        userId: user.userId,
+        userName: user.name,
+        details: {
+          from: oldStatus,
+          to: status
+        }
+      });
+    } catch (logError) {
+      console.error('Error adding activity log:', logError);
+    }
 
     // Collect all notification recipients (admins + assigned members + creator)
     let notifiedCount = 0;

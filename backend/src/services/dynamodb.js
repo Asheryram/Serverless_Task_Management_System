@@ -260,6 +260,35 @@ const getUsersByIds = async (userIds) => {
   return result.Responses?.[USERS_TABLE] || [];
 };
 
+/**
+ * Add activity log entry to a task
+ * Uses DynamoDB list_append to atomically append to the activityLog array
+ */
+const addTaskActivityLog = async (taskId, activity) => {
+  const logEntry = {
+    id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    timestamp: new Date().toISOString(),
+    ...activity
+  };
+
+  try {
+    await docClient.send(new UpdateCommand({
+      TableName: TASKS_TABLE,
+      Key: { taskId },
+      UpdateExpression: 'SET activityLog = list_append(if_not_exists(activityLog, :emptyList), :newActivity), updatedAt = :updatedAt',
+      ExpressionAttributeValues: {
+        ':newActivity': [logEntry],
+        ':emptyList': [],
+        ':updatedAt': new Date().toISOString()
+      }
+    }));
+    return logEntry;
+  } catch (error) {
+    console.error('Error adding activity log:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   // Task operations
   createTask,
@@ -270,6 +299,7 @@ module.exports = {
   getTasksByStatus,
   getTasksForUser,
   getTasksCreatedBy,
+  addTaskActivityLog,
   
   // User operations
   createUser,

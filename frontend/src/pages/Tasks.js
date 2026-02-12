@@ -25,6 +25,7 @@ const Tasks = () => {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [statusFilter, setStatusFilter] = useState(searchParams.get('status') || '');
+  const [priorityFilter, setPriorityFilter] = useState(searchParams.get('priority') || '');
   const [searchTerm, setSearchTerm] = useState('');
 
   // Form state for creating task
@@ -40,17 +41,23 @@ const Tasks = () => {
 
   useEffect(() => {
     fetchTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter]);
+
+  useEffect(() => {
     if (isAdmin) {
       fetchUsers();
     }
-    
+  }, [isAdmin]);
+
+  useEffect(() => {
     // Check if action=create is in URL
     if (searchParams.get('action') === 'create' && isAdmin) {
       setShowCreateModal(true);
       searchParams.delete('action');
       setSearchParams(searchParams);
     }
-  }, [statusFilter]);
+  }, [searchParams, setSearchParams, isAdmin]);
 
   const fetchTasks = async () => {
     try {
@@ -164,11 +171,16 @@ const Tasks = () => {
     });
   };
 
-  // Filter tasks by search term
-  const filteredTasks = tasks.filter(task =>
-    task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    task.description?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter tasks by search term and priority
+  const filteredTasks = tasks.filter(task => {
+    const matchesSearch = !searchTerm || 
+      task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      task.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesPriority = !priorityFilter || task.priority === priorityFilter;
+    
+    return matchesSearch && matchesPriority;
+  });
 
   if (isLoading) {
     return (
@@ -223,6 +235,34 @@ const Tasks = () => {
             <option value="CLOSED">Closed</option>
           </select>
         </div>
+
+        <div className="filter-group">
+          <select
+            value={priorityFilter}
+            onChange={(e) => setPriorityFilter(e.target.value)}
+            className="filter-select"
+          >
+            <option value="">All Priorities</option>
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+            <option value="URGENT">Urgent</option>
+          </select>
+        </div>
+
+        {/* Clear Filters Button */}
+        {(searchTerm || statusFilter || priorityFilter) && (
+          <button 
+            className="btn btn-secondary btn-sm"
+            onClick={() => {
+              setSearchTerm('');
+              setStatusFilter('');
+              setPriorityFilter('');
+            }}
+          >
+            <FiX /> Clear
+          </button>
+        )}
       </div>
 
       {/* Tasks List */}
@@ -232,7 +272,7 @@ const Tasks = () => {
             <div className="empty-state-icon">📋</div>
             <div className="empty-state-title">No tasks found</div>
             <div className="empty-state-description">
-              {searchTerm || statusFilter
+              {searchTerm || statusFilter || priorityFilter
                 ? "Try adjusting your filters"
                 : isAdmin
                   ? "Create your first task to get started"
