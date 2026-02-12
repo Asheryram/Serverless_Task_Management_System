@@ -49,7 +49,7 @@ exports.handler = async (event) => {
 
     console.log('Task created:', task.taskId);
 
-    return success({ message: 'Task created successfully', task }, 201, 200, event);
+    return success({ message: 'Task created successfully', task }, 201, event);
   } catch (err) {
     console.error('Error creating task:', err);
     return error('Failed to create task', 500, null, event);

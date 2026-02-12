@@ -26,7 +26,7 @@ exports.handler = async (event) => {
     const { status } = body;
 
     if (!status || !isValidStatus(status)) {
-      return error('Valid status is required', 400, { validStatuses: TASK_STATUSES }, event, event);
+      return error('Valid status is required', 400, { validStatuses: TASK_STATUSES }, event);
     }
 
     const task = await getTaskById(taskId);
@@ -64,36 +64,49 @@ exports.handler = async (event) => {
       }
     });
 
-    // Collect all notification recipients
-    const adminUsers = await listUsersInGroup('Admins');
-    const adminIds = adminUsers.map(u => u.userId);
+    // Collect all notification recipients (admins + assigned members + creator)
+    let notifiedCount = 0;
+    try {
+      const adminUsers = await listUsersInGroup('Admins');
+      const adminIds = adminUsers.map(u => u.userId);
 
-    const recipientIds = new Set([
-      ...adminIds,
-      ...(task.assignedMembers || []),
-      task.createdBy
-    ]);
+      const recipientIds = new Set([
+        ...adminIds,
+        ...(task.assignedMembers || [])
+      ]);
 
-    // Don't notify the user who made the update
-    recipientIds.delete(user.userId);
-
-    // Send email notifications
-    const emailPromises = [...recipientIds].map(async (userId) => {
-      const email = await getUserEmail(userId);
-      if (email) {
-        await sendStatusUpdateEmail({
-          toEmail: email,
-          task,
-          oldStatus,
-          newStatus: status,
-          updaterName: user.name
-        });
+      // Add task creator if it exists
+      if (task.createdBy) {
+        recipientIds.add(task.createdBy);
       }
-    });
 
-    await Promise.all(emailPromises);
+      // Don't notify the user who made the update
+      recipientIds.delete(user.userId);
 
-    console.log('Task status updated:', taskId, 'from', oldStatus, 'to', status, 'Notified:', recipientIds.size, 'users');
+      // Send per-recipient SNS notifications (needed for SNS filter policy routing)
+      const notifyResults = await Promise.allSettled(
+        [...recipientIds].map(async (userId) => {
+          const email = await getUserEmail(userId);
+          if (email) {
+            await sendStatusUpdateEmail({
+              toEmail: email,
+              task,
+              oldStatus,
+              newStatus: status,
+              updaterName: user.name
+            });
+            return true;
+          }
+          return false;
+        })
+      );
+
+      notifiedCount = notifyResults.filter(r => r.status === 'fulfilled' && r.value).length;
+    } catch (notifyError) {
+      console.error('Error sending status update notifications:', notifyError);
+    }
+
+    console.log('Task status updated:', taskId, 'from', oldStatus, 'to', status, 'Notified:', notifiedCount, 'users');
 
     return success({
       message: 'Task status updated successfully',

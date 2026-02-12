@@ -51,6 +51,7 @@ Task Management System`;
 
 /**
  * Send task status update email notification via SNS
+ * Publishes per recipient so SNS filter policies (set on user signup) can route correctly
  */
 const sendStatusUpdateEmail = async ({ toEmail, task, oldStatus, newStatus, updaterName }) => {
   const subject = `Task Status Updated: ${task.title}`;
@@ -84,10 +85,10 @@ Task Management System`;
       }
     }));
     
-    console.log(`SNS email notification sent for status update to: ${toEmail}`);
+    console.log(`SNS status update notification sent to: ${toEmail}`);
     return true;
   } catch (error) {
-    console.error('Failed to send SNS email notification:', error);
+    console.error('Failed to send SNS status update notification:', error);
     return false;
   }
 };

@@ -319,14 +319,22 @@ function TaskDetail() {
             <h4><FiUsers /> Assigned Members</h4>
             {task.assignedMembers?.length > 0 ? (
               <ul className="assigned-list">
-                {task.assignedMembers.map((member, index) => (
-                  <li key={index} className="assigned-member">
-                    <div className="member-avatar-small">
-                      {member.name?.charAt(0) || member.email?.charAt(0) || '?'}
-                    </div>
-                    <span>{member.name || member.email}</span>
-                  </li>
-                ))}
+                {task.assignedMembers.map((member, index) => {
+                  // assignedMembers can be an array of user ID strings or objects
+                  const isObject = typeof member === 'object' && member !== null;
+                  const displayName = isObject ? (member.name || member.email || member) : member;
+                  const initial = isObject
+                    ? (member.name?.charAt(0) || member.email?.charAt(0) || '?')
+                    : '?';
+                  return (
+                    <li key={index} className="assigned-member">
+                      <div className="member-avatar-small">
+                        {initial}
+                      </div>
+                      <span>{displayName}</span>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p className="no-assigned">No members assigned</p>

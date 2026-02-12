@@ -48,17 +48,25 @@ exports.handler = async (event) => {
 
     const updatedTask = await updateTask(taskId, { assignedMembers: allMembers });
 
-    // Send email notifications to new members
-    const emailPromises = newMembers.map(async (memberId) => {
-      const email = await getUserEmail(memberId);
-      if (email) {
-        await sendTaskAssignmentEmail({ toEmail: email, task, assignerName: user.name });
-      }
-    });
+    // Send email notifications to new members (don't let notification failure crash the response)
+    let notifiedCount = 0;
+    try {
+      const notifyResults = await Promise.allSettled(
+        newMembers.map(async (memberId) => {
+          const email = await getUserEmail(memberId);
+          if (email) {
+            await sendTaskAssignmentEmail({ toEmail: email, task, assignerName: user.name });
+            return true;
+          }
+          return false;
+        })
+      );
+      notifiedCount = notifyResults.filter(r => r.status === 'fulfilled' && r.value).length;
+    } catch (notifyError) {
+      console.error('Error sending assignment notifications:', notifyError);
+    }
 
-    await Promise.all(emailPromises);
-
-    console.log('Task assigned:', taskId, 'to members:', newMembers);
+    console.log('Task assigned:', taskId, 'to members:', newMembers, 'Notified:', notifiedCount);
 
     return success({
       message: 'Task assigned successfully',
