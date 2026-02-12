@@ -10,7 +10,7 @@ exports.handler = async (event) => {
   try {
     const user = getUserFromEvent(event);
     if (!user) {
-      return error('Unauthorized', 401);
+      return error('Unauthorized', 401, null, event);
     }
 
     const status = getQueryParam(event, 'status');
@@ -38,9 +38,9 @@ exports.handler = async (event) => {
       tasks,
       count: tasks.length,
       isAdmin: isAdmin(user)
-    });
+    }, 200, event);
   } catch (err) {
     console.error('Error getting tasks:', err);
-    return error('Failed to retrieve tasks', 500);
+    return error('Failed to retrieve tasks', 500, null, event);
   }
 };
