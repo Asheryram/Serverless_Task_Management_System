@@ -24,9 +24,8 @@ variable "cognito_user_pool_arn" {
 }
 
 variable "cors_allowed_origins" {
-  description = "Allowed origins for CORS"
+  description = "Allowed origins for CORS. Must be explicitly set to a strict list of origins (e.g. [\"https://your-frontend.com\"]). Do not use [\"*\"] in production."
   type        = list(string)
-  default     = ["*"]
 }
 
 # Lambda ARNs
