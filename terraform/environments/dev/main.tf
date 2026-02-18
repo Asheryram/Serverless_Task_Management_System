@@ -1,4 +1,4 @@
-# Development Environment Configuration
+
 
 terraform {
   # Uncomment to use S3 backend for state management
